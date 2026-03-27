@@ -1,0 +1,6 @@
+name: district
+title: 河区调度
+icon: "🗺️"
+order: 60
+description: 19河区逐日水资源供需平衡调度
+version: 1.0.0
