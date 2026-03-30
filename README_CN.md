@@ -18,7 +18,7 @@
 
 ---
 
-![hydro-district demo](docs/screenshots/demo.svg)
+![hydro-district demo](docs/screenshots/demo.png)
 
         ---
 
