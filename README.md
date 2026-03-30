@@ -1,24 +1,52 @@
-# 🗺️ Hydro District — District Water Scheduling
+        # hydro-district
 
-[![GitHub stars](https://img.shields.io/github/stars/zengtianli/hydro-district)](https://github.com/zengtianli/hydro-district)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.36+-FF4B4B.svg)](https://streamlit.io)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-hydro--district.tianlizeng.cloud-brightgreen)](https://hydro-district.tianlizeng.cloud)
+        **English** | [中文](README_CN.md)
 
-Daily water supply-demand balance scheduling model for 19 river districts.
+        Daily water supply-demand scheduling across 19 river districts with reservoir and sluice gate management.
 
-![screenshot](docs/screenshot.png)
+        [![Live Demo](https://img.shields.io/badge/Live_Demo-hydro--district.tianlizeng.cloud-blue?style=for-the-badge)](https://hydro-district.tianlizeng.cloud)
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-yellow?style=for-the-badge)](https://python.org)
+        [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-## Features
+        ---
 
-- **19 district model** — covers all river districts with individual parameters
-- **Daily scheduling** — day-by-day supply-demand balance with reservoir and sluice operations
-- **ZIP I/O** — upload input data as ZIP, download results as ZIP
-- **Result browser** — inspect per-district output files in the UI
-- **Built-in sample data** — downloadable example dataset for quick testing
+        ---
 
-## Quick Start
+### Try it now — no install needed
+
+**https://hydro-district.tianlizeng.cloud**
+
+---
+
+![hydro-district demo](docs/screenshots/demo.svg)
+
+        ---
+
+        ## What can hydro-district do?
+
+        | Feature | Description |
+        |---------|-------------|
+        | **19-district model** | Individual parameters per district for accurate local scheduling |
+| **Daily scheduling** | Day-by-day supply-demand balance with operations log |
+| **Reservoir & sluice control** | Manage inflow, outflow, gate operations per timestep |
+| **Batch import/export** | ZIP-based multi-district data workflow |
+| **Result browser** | Built-in viewer for district-specific outputs |
+
+        ## Install
+
+        ```bash
+        git clone https://github.com/zengtianli/hydro-district.git
+cd hydro-district
+pip install -r requirements.txt
+        ```
+
+        ## Quick Start
+
+        ```bash
+        streamlit run app.py
+        ```
+
+        ## Self-host
 
 ```bash
 git clone https://github.com/zengtianli/hydro-district.git
@@ -27,19 +55,13 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Deploy (VPS)
+Or use the hosted version: **https://hydro-district.tianlizeng.cloud**
 
-```bash
-git clone https://github.com/zengtianli/hydro-district.git
-cd hydro-district
-pip install -r requirements.txt
-nohup streamlit run app.py --server.port 8506 --server.headless true &
-```
+## Requirements
 
-## Hydro Toolkit Plugin
+        - Python 3.9+
+        - Streamlit 1.36+
 
-This project is a plugin for [Hydro Toolkit](https://github.com/zengtianli/hydro-toolkit) and can also run standalone. Install it in the Toolkit by pasting this repo URL in the Plugin Manager. You can also **[try it online](https://hydro-district.tianlizeng.cloud)** — no install needed.
+        ## License
 
-## License
-
-MIT
+        MIT

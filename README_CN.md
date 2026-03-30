@@ -1,24 +1,52 @@
-# 🗺️ 河区调度
+        # hydro-district
 
-[![GitHub stars](https://img.shields.io/github/stars/zengtianli/hydro-district)](https://github.com/zengtianli/hydro-district)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.36+-FF4B4B.svg)](https://streamlit.io)
-[![在线演示](https://img.shields.io/badge/%E5%9C%A8%E7%BA%BF%E6%BC%94%E7%A4%BA-hydro--district.tianlizeng.cloud-brightgreen)](https://hydro-district.tianlizeng.cloud)
+        [English](README.md) | **中文**
 
-19 河区逐日水资源供需平衡调度模型。
+        面向 19 个河湖分区的逐日供需调度模型，支持水库与闸门精细化管理。
 
-![screenshot](docs/screenshot.png)
+        [![在线演示](https://img.shields.io/badge/在线演示-hydro--district.tianlizeng.cloud-blue?style=for-the-badge)](https://hydro-district.tianlizeng.cloud)
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-yellow?style=for-the-badge)](https://python.org)
+        [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-## 功能特点
+        ---
 
-- **19 河区模型** — 覆盖所有河区，各区独立参数
-- **逐日调度** — 水库和闸门操作的逐日供需平衡
-- **ZIP 输入输出** — 打包上传输入数据，打包下载调度结果
-- **结果浏览器** — 在页面中查看各河区输出文件
-- **内置示例数据** — 可下载的示例数据集
+        ---
 
-## 快速开始
+### 无需安装，立即体验
+
+**https://hydro-district.tianlizeng.cloud**
+
+---
+
+![hydro-district demo](docs/screenshots/demo.svg)
+
+        ---
+
+        ## 功能一览
+
+        | 功能 | 说明 |
+        |------|------|
+        | **19 分区模型** | 各分区独立参数，精准本地化调度 |
+| **逐日调度** | 逐日供需平衡，含操作日志 |
+| **水库与闸门控制** | 管理每个时步的入流、出流和闸门操作 |
+| **批量导入/导出** | 基于 ZIP 的多分区数据工作流 |
+| **结果浏览器** | 内置分区专属输出查看器 |
+
+        ## 安装
+
+        ```bash
+        git clone https://github.com/zengtianli/hydro-district.git
+cd hydro-district
+pip install -r requirements.txt
+        ```
+
+        ## 快速开始
+
+        ```bash
+        streamlit run app.py
+        ```
+
+        ## 自托管
 
 ```bash
 git clone https://github.com/zengtianli/hydro-district.git
@@ -27,19 +55,13 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## 部署（VPS）
+或直接使用托管版本：**https://hydro-district.tianlizeng.cloud**
 
-```bash
-git clone https://github.com/zengtianli/hydro-district.git
-cd hydro-district
-pip install -r requirements.txt
-nohup streamlit run app.py --server.port 8506 --server.headless true &
-```
+## 环境要求
 
-## Hydro Toolkit 插件
+        - Python 3.9+
+        - Streamlit 1.36+
 
-本项目是 [Hydro Toolkit](https://github.com/zengtianli/hydro-toolkit) 的插件，也可独立运行。在 Toolkit 的插件管理页面粘贴本仓库 URL 即可安装。也可以直接**[在线体验](https://hydro-district.tianlizeng.cloud)**，无需安装。
+        ## License
 
-## 许可证
-
-MIT
+        MIT
