@@ -19,8 +19,8 @@ cd /Users/tianli/Dev/hydro-district
 # 本地启动
 streamlit run app.py
 
-# 依赖安装（miniforge 环境）
-/Users/tianli/miniforge3/bin/pip install -r requirements.txt
+# 依赖安装（uv 管理）
+uv sync
 
 # 推送并重启 VPS 服务（如有 systemd 服务）
 ssh root@104.218.100.67 "cd /var/www/hydro-district && git pull && systemctl restart hydro-district"
