@@ -29,3 +29,7 @@ build/
 *$py.class
 Thumbs.db
 *.swp
+
+# Compute outputs (not source)
+data/sample/output_*.txt
+data/sample/data/
