@@ -5,6 +5,7 @@ Run:
 """
 from __future__ import annotations
 
+import base64
 import io
 import sys
 import tempfile
@@ -13,9 +14,9 @@ import zipfile
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -53,12 +54,106 @@ def meta_info() -> dict:
     }
 
 
+def _preview_input_zip(zip_bytes: bytes) -> dict:
+    """Parse the uploaded ZIP's file listing for the Step 2 preview card.
+
+    Groups entries into `input` / `static` / `other` based on filename prefix.
+    """
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+            infos = [i for i in z.infolist() if not i.is_dir()]
+    except zipfile.BadZipFile as exc:
+        raise HTTPException(400, f"上传文件不是有效 ZIP: {exc}")
+
+    files = []
+    total_size = 0
+    for info in infos:
+        name = Path(info.filename).name
+        if name.startswith("input_"):
+            group = "input"
+        elif name.startswith("static_"):
+            group = "static"
+        else:
+            group = "other"
+        files.append(
+            {
+                "name": info.filename,
+                "basename": name,
+                "size": info.file_size,
+                "group": group,
+            }
+        )
+        total_size += info.file_size
+
+    files.sort(key=lambda f: (f["group"] != "input", f["group"] != "static", f["name"]))
+    return {
+        "inputFiles": files,
+        "fileCount": len(files),
+        "totalSize": total_size,
+    }
+
+
+def _read_text_head(path: Path, limit: int = 50) -> dict:
+    """Read a whitespace-delimited text file and return head rows (columns inferred)."""
+    try:
+        raw = path.read_text(encoding="utf-8", errors="replace")
+    except Exception as exc:  # pragma: no cover — best-effort preview
+        return {"columns": ["error"], "rows": [[str(exc)]], "totalRows": 0}
+
+    lines = [ln for ln in raw.splitlines() if ln.strip()]
+    total = len(lines)
+    if total == 0:
+        return {"columns": [], "rows": [], "totalRows": 0}
+
+    # 首行做 header（若全是数字/日期样式则合成 col1..colN）
+    first_cells = lines[0].split()
+    header_is_text = any(
+        (not c.replace(".", "").replace("-", "").replace(":", "").isdigit())
+        and not c.replace("/", "").isdigit()
+        for c in first_cells
+    )
+    if header_is_text and len(first_cells) >= 2:
+        columns = first_cells
+        body = lines[1:]
+        total_rows = total - 1
+    else:
+        columns = [f"col{i + 1}" for i in range(len(first_cells))]
+        body = lines
+        total_rows = total
+
+    sliced = body[:limit]
+    rows: list[list[str]] = []
+    width = len(columns)
+    for ln in sliced:
+        cells = ln.split()
+        if len(cells) < width:
+            cells = cells + [""] * (width - len(cells))
+        elif len(cells) > width:
+            # 合并溢出列到最后一格
+            cells = cells[: width - 1] + [" ".join(cells[width - 1 :])]
+        rows.append(cells)
+    return {"columns": columns, "rows": rows, "totalRows": total_rows}
+
+
 def _run_district(zip_bytes: bytes) -> tuple[bytes, dict]:
     """Port of app.py's "开始计算" button handler without Streamlit coupling.
 
     Input: ZIP bytes containing `input_*.txt` + `static_*.txt`.
     Output: (result_zip_bytes, summary_dict).
     """
+    payload = _run_district_full(zip_bytes, with_previews=False)
+    return payload["_zip_bytes"], payload["_summary"]
+
+
+def _run_district_full(zip_bytes: bytes, with_previews: bool = True) -> dict:
+    """Full pipeline that also exposes output-file previews and metadata.
+
+    Returns a dict with `preview` / `meta` / `results` / `outputFiles` / `zipBase64`
+    when `with_previews=True`, plus `_zip_bytes` / `_summary` for internal reuse.
+    """
+    started = time.perf_counter()
+    preview_payload = _preview_input_zip(zip_bytes)
+
     with tempfile.TemporaryDirectory() as tmpdir_raw:
         tmpdir = Path(tmpdir_raw)
         data_dir = tmpdir / "input"
@@ -100,32 +195,90 @@ def _run_district(zip_bytes: bytes) -> tuple[bytes, dict]:
         if isinstance(results, dict) and results.get("status") not in (None, "success"):
             raise HTTPException(500, f"计算失败: {results.get('message', '未知错误')}")
 
-        # Bundle every file produced under output_dir into a new ZIP.
-        result_zip = io.BytesIO()
-        file_count = 0
-        with zipfile.ZipFile(result_zip, "w", zipfile.ZIP_DEFLATED) as z:
-            for f in sorted(output_dir.rglob("*")):
-                if f.is_file():
-                    z.write(f, arcname=f.relative_to(output_dir))
-                    file_count += 1
-        if file_count == 0:
+        # Collect all output files, then bundle into a ZIP.
+        output_files_meta: list[dict] = []
+        all_output_paths: list[Path] = []
+        for f in sorted(output_dir.rglob("*")):
+            if f.is_file():
+                all_output_paths.append(f)
+                rel = f.relative_to(output_dir)
+                output_files_meta.append(
+                    {
+                        "name": rel.as_posix(),
+                        "basename": f.name,
+                        "size": f.stat().st_size,
+                        "subdir": rel.parent.as_posix() if rel.parent.as_posix() != "." else "",
+                    }
+                )
+
+        if not all_output_paths:
             raise HTTPException(500, "计算未产生任何输出文件")
 
+        result_zip = io.BytesIO()
+        with zipfile.ZipFile(result_zip, "w", zipfile.ZIP_DEFLATED) as z:
+            for f in all_output_paths:
+                z.write(f, arcname=f.relative_to(output_dir))
+        zip_bytes_out = result_zip.getvalue()
+
         summary = {
-            "file_count": file_count,
+            "file_count": len(all_output_paths),
             "districts_processed": (results or {}).get("districts_processed", 0),
             "total_water_demand": (results or {}).get("total_water_demand", 0),
             "total_water_supply": (results or {}).get("total_water_supply", 0),
             "total_shortage": (results or {}).get("total_shortage", 0),
         }
-        return result_zip.getvalue(), summary
+
+        # Build per-file previews for the "main" hq output txts (top-level).
+        results_payload: dict[str, dict] = {}
+        if with_previews:
+            PREVIEW_LIMIT = 50
+            # 主要 output — 顶层的 output_hq_*.txt / output_sn_*.txt
+            for f in all_output_paths:
+                rel = f.relative_to(output_dir)
+                if rel.parent.as_posix() != ".":
+                    continue
+                name = rel.name
+                if not (name.startswith("output_hq_") or name.startswith("output_sn_")):
+                    continue
+                if not name.endswith(".txt"):
+                    continue
+                key = name[: -len(".txt")]
+                results_payload[key] = _read_text_head(f, limit=PREVIEW_LIMIT)
+
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+
+        if not with_previews:
+            # Internal reuse path for the binary endpoint.
+            return {"_zip_bytes": zip_bytes_out, "_summary": summary}
+
+        return {
+            "preview": preview_payload,
+            "meta": {
+                "districtsProcessed": summary["districts_processed"],
+                "totalDemand": summary["total_water_demand"],
+                "totalSupply": summary["total_water_supply"],
+                "totalShortage": summary["total_shortage"],
+                "fileCount": summary["file_count"],
+                "elapsedMs": elapsed_ms,
+                "zipBytes": len(zip_bytes_out),
+            },
+            "results": results_payload,
+            "outputFiles": output_files_meta,
+            "zipBase64": base64.b64encode(zip_bytes_out).decode("ascii"),
+        }
 
 
 @app.post("/api/compute")
-async def compute(file: UploadFile = File(..., description="ZIP: input_*.txt + static_*.txt")) -> Response:
+async def compute(
+    file: UploadFile = File(..., description="ZIP: input_*.txt + static_*.txt"),
+    format: str = Form("zip", description="zip (binary) | json (preview+meta+results+base64)"),
+) -> Response:
     content = await file.read()
     if not content:
         raise HTTPException(400, "上传文件为空")
+    if format == "json":
+        payload = _run_district_full(content, with_previews=True)
+        return JSONResponse(content=payload)
     t0 = time.perf_counter()
     zip_bytes, summary = _run_district(content)
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
