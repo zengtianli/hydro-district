@@ -33,3 +33,4 @@ Thumbs.db
 # Compute outputs (not source)
 data/sample/output_*.txt
 data/sample/data/
+data/sample/input_sample.zip
